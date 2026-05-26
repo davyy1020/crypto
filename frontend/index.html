@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptonite — Real-Time Crypto Dashboard</title>
+    <meta name="description" content="Premium real-time cryptocurrency dashboard with live WebSocket streaming from Binance, order book visualization, price alerts, and TradingView charting engine.">
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
+
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div class="app-shell">
+        <!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h1>Cryptonite</h1>
+                        <span>Live Market Engine</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="connection-card" id="connection-card">
+                <div class="conn-header">
+                    <span class="conn-label">WebSocket</span>
+                    <div class="conn-badge" id="conn-badge">
+                        <span class="conn-dot"></span>
+                        <span class="conn-text" id="conn-text">CONNECTING</span>
+                    </div>
+                </div>
+                <div class="conn-metrics">
+                    <div class="conn-metric">
+                        <span class="cm-label">Latency</span>
+                        <span class="cm-value" id="metric-latency">— ms</span>
+                    </div>
+                    <div class="conn-metric">
+                        <span class="cm-label">Msgs/s</span>
+                        <span class="cm-value" id="metric-msgrate">0</span>
+                    </div>
+                    <div class="conn-metric">
+                        <span class="cm-label">Uptime</span>
+                        <span class="cm-value" id="metric-uptime">0s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coin Watchlist -->
+            <div class="watchlist-header">
+                <h2>Watchlist</h2>
+                <span class="watchlist-count" id="watchlist-count">6 pairs</span>
+            </div>
+            <div class="watchlist" id="watchlist">
+                <!-- Dynamically generated coin cards -->
+            </div>
+        </aside>
+
+        <!-- ═══════════════════════ MAIN ═══════════════════════ -->
+        <main class="main-area">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="sidebar-toggle" id="sidebar-toggle">
+                        <i data-lucide="panel-left"></i>
+                    </button>
+                    <div class="active-pair-info">
+                        <h2 id="active-pair-title">Bitcoin <span class="pair-symbol">BTC/USDT</span></h2>
+                        <p id="active-pair-subtitle">Binance Spot — WebSocket Stream</p>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="exchange-selector">
+                        <i data-lucide="globe" class="sel-icon"></i>
+                        <select id="exchange-select" class="glass-select">
+                            <option value="binance" selected>Binance</option>
+                            <option value="bybit">Bybit</option>
+                            <option value="okx">OKX</option>
+                        </select>
+                    </div>
+                    <div class="currency-selector" style="margin-left: 8px;">
+                        <i data-lucide="coins" class="sel-icon"></i>
+                        <select id="currency-select" class="glass-select">
+                            <option value="USD">USD ($)</option>
+                            <option value="IDR" selected>IDR (Rp)</option>
+                        </select>
+                    </div>
+                    <button class="topbar-btn" id="btn-alerts" title="Price Alerts">
+                        <i data-lucide="bell"></i>
+                        <span class="alert-count-badge" id="alert-count-badge" style="display:none;">0</span>
+                    </button>
+                    <button class="topbar-btn" id="btn-fullscreen" title="Fullscreen">
+                        <i data-lucide="maximize-2"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats Strip -->
+            <section class="stats-strip">
+                <div class="stat-chip stat-price-chip">
+                    <div class="chip-icon green"><i data-lucide="trending-up"></i></div>
+                    <div class="chip-content">
+                        <span class="chip-label">Price</span>
+                        <span class="chip-value" id="stat-price">$—</span>
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <div class="chip-icon"><i data-lucide="percent"></i></div>
+                    <div class="chip-content">
+                        <span class="chip-label">24h Change</span>
+                        <span class="chip-value" id="stat-change">0.00%</span>
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <div class="chip-icon"><i data-lucide="arrow-up-circle"></i></div>
+                    <div class="chip-content">
+                        <span class="chip-label">24h High</span>
+                        <span class="chip-value" id="stat-high">$—</span>
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <div class="chip-icon"><i data-lucide="arrow-down-circle"></i></div>
+                    <div class="chip-content">
+                        <span class="chip-label">24h Low</span>
+                        <span class="chip-value" id="stat-low">$—</span>
+                    </div>
+                </div>
+                <div class="stat-chip">
+                    <div class="chip-icon"><i data-lucide="bar-chart-3"></i></div>
+                    <div class="chip-content">
+                        <span class="chip-label">24h Volume</span>
+                        <span class="chip-value" id="stat-volume">—</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+                <!-- Chart Panel -->
+                <section class="chart-panel">
+                    <div class="panel-header">
+                        <div class="chart-controls" style="display: flex; gap: 8px;">
+                            <div class="style-tabs">
+                                <button class="style-tab active" data-style="candles" title="Candlestick Chart">
+                                    <i data-lucide="bar-chart-2"></i>
+                                    <span>Candles</span>
+                                </button>
+                                <button class="style-tab" data-style="area" title="Area Line Chart">
+                                    <i data-lucide="activity"></i>
+                                    <span>Area</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="chart-status">
+                            <span class="live-dot"></span>
+                            <span>Live Chart</span>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <div id="tv-chart"></div>
+                        <div class="chart-loader" id="chart-loader">
+                            <div class="loader-spinner"></div>
+                            <span>Loading chart data...</span>
+                        </div>
+                    </div>
+                    <!-- TradingView-Style Range Selector Footer -->
+                    <div class="chart-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.015); border-bottom-left-radius: var(--r-lg); border-bottom-right-radius: var(--r-lg);">
+                        <div class="range-tabs" style="display: flex; gap: 4px;">
+                            <button class="range-tab" data-range="1d" style="background: transparent; border: none; color: var(--text3); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">1 hari</button>
+                            <button class="range-tab" data-range="1w" style="background: transparent; border: none; color: var(--text3); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">1 minggu</button>
+                            <button class="range-tab" data-range="1m" style="background: transparent; border: none; color: var(--text3); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">1 bulan</button>
+                            <button class="range-tab" data-range="3m" style="background: transparent; border: none; color: var(--text3); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">3 bulan</button>
+                            <button class="range-tab" data-range="1y" style="background: transparent; border: none; color: var(--text3); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">1 tahun</button>
+                            <button class="range-tab active" data-range="all" style="background: rgba(0, 229, 255, 0.1); color: var(--cyan); font-size: 0.65rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--tr);">Sepanjang waktu</button>
+                        </div>
+                        <div class="chart-timezone-label" style="font-size: 0.62rem; color: var(--text3); font-weight: 500; font-family: var(--mono); letter-spacing: 0.5px;">
+                            UTC+7 (WIB)
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Order Book Panel -->
+                <section class="orderbook-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="book-open" style="width:16px;height:16px;"></i> Order Book</h3>
+                        <div class="ob-spread" id="ob-spread">Spread: —</div>
+                    </div>
+                    <div class="orderbook-body">
+                        <!-- Ask header -->
+                        <div class="ob-col-headers">
+                            <span>Price (USDT)</span>
+                            <span>Amount</span>
+                            <span>Total</span>
+                        </div>
+                        <!-- Asks (sells) -->
+                        <div class="ob-asks" id="ob-asks">
+                            <!-- Filled by JS -->
+                        </div>
+                        <!-- Spread bar -->
+                        <div class="ob-mid-price" id="ob-mid-price">
+                            <span class="mid-price-value">$—</span>
+                            <span class="mid-price-label">Mid Price</span>
+                        </div>
+                        <!-- Bids (buys) -->
+                        <div class="ob-bids" id="ob-bids">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Bottom Panels -->
+            <div class="bottom-panels">
+                <!-- Trades / Log Panel -->
+                <section class="trades-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="activity" style="width:16px;height:16px;"></i> Recent Trades</h3>
+                        <button class="clear-btn" id="clear-trades">Clear</button>
+                    </div>
+                    <div class="trades-headers">
+                        <span>Price</span>
+                        <span>Amount</span>
+                        <span>Time</span>
+                    </div>
+                    <div class="trades-body" id="trades-body">
+                        <!-- Filled by JS -->
+                    </div>
+                </section>
+
+                <!-- Alerts Panel -->
+                <section class="alerts-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="bell-ring" style="width:16px;height:16px;"></i> Price Alerts</h3>
+                        <button class="sound-toggle" id="sound-toggle" title="Toggle alert sound">
+                            <i data-lucide="volume-2" id="sound-icon"></i>
+                        </button>
+                    </div>
+                    <div class="alert-form">
+                        <select id="alert-pair" class="alert-input alert-select">
+                            <!-- Filled by JS -->
+                        </select>
+                        <select id="alert-condition" class="alert-input alert-select-sm">
+                            <option value=">">&gt;</option>
+                            <option value="<">&lt;</option>
+                        </select>
+                        <input type="number" id="alert-price" class="alert-input alert-price-input" placeholder="Target price...">
+                        <button class="alert-add-btn" id="alert-add-btn">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                        </button>
+                    </div>
+                    <div class="alerts-list" id="alerts-list">
+                        <div class="no-alerts" id="no-alerts">No active alerts</div>
+                    </div>
+                </section>
+
+                <!-- Market Info -->
+                <section class="market-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="line-chart" style="width:16px;height:16px;"></i> Market Summary</h3>
+                    </div>
+                    <div class="market-body" id="market-body">
+                        <div class="market-row">
+                            <span class="mr-label">Open Price</span>
+                            <span class="mr-value" id="mk-open">$—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Weighted Avg</span>
+                            <span class="mr-value" id="mk-wavg">$—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Prev Close</span>
+                            <span class="mr-value" id="mk-prevclose">$—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Quote Volume</span>
+                            <span class="mr-value" id="mk-qvol">—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Trade Count</span>
+                            <span class="mr-value" id="mk-trades">—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Bid Price</span>
+                            <span class="mr-value green" id="mk-bid">$—</span>
+                        </div>
+                        <div class="market-row">
+                            <span class="mr-label">Ask Price</span>
+                            <span class="mr-value red" id="mk-ask">$—</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Alert Triggered Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
