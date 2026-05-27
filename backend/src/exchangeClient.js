@@ -1,6 +1,6 @@
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 
-export class BinanceStreamClient {
+class BinanceStreamClient {
   constructor({ symbol, onMarketData, onStatus }) {
     this.symbol = symbol.toLowerCase();
     this.onMarketData = onMarketData;
@@ -184,3 +184,5 @@ export class BinanceStreamClient {
     return null;
   }
 }
+
+module.exports = { BinanceStreamClient };

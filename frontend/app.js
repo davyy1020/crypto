@@ -3,7 +3,7 @@
  * Uses backend proxy (CoinGecko) for ISP-safe real market data
  * Prices in both USD and IDR with live exchange rate
  */
-const BACKEND = 'http://localhost:4000';
+const BACKEND = 'https://farm.agungtrijayaabadi.com';
 
 const COINS = [
   { sym:'BTCUSDT', name:'Bitcoin', base:'BTC' },

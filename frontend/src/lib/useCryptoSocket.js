@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:4000';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://farm.agungtrijayaabadi.com';
 
 export function useCryptoSocket() {
   const wsRef = useRef(null);

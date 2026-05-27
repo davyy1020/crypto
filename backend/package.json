@@ -2,11 +2,10 @@
   "name": "crypto-realtime-dashboard-backend",
   "version": "1.0.0",
   "description": "Node.js WebSocket relay backend for realtime crypto market dashboard",
-  "main": "src/index.js",
-  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -1,4 +1,4 @@
-export function checkPriceAlert({ symbol, price, threshold }) {
+function checkPriceAlert({ symbol, price, threshold }) {
   if (!threshold || Number.isNaN(Number(threshold))) return null;
 
   const latestPrice = Number(price);
@@ -16,3 +16,5 @@ export function checkPriceAlert({ symbol, price, threshold }) {
 
   return null;
 }
+
+module.exports = { checkPriceAlert };
