@@ -142,7 +142,7 @@ async function fetchUsdIdrRate() {
 // ══════ DATA FETCHING DIRECTLY FROM PUBLIC EXCHANGE API ══════
 async function fetchPrices() {
   try {
-    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT"]');
+    const res = await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT"]');
     const data = await res.json();
     if (!Array.isArray(data)) return;
 
@@ -195,7 +195,7 @@ async function fetchPrices() {
 
 async function fetchOrderBook() {
   try {
-    const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${S.active}&limit=20`);
+    const res = await fetch(`https://data-api.binance.vision/api/v3/depth?symbol=${S.active}&limit=20`);
     const data = await res.json();
     if (data.asks && data.bids) {
       renderOrderBook(data.asks, data.bids);
@@ -207,7 +207,7 @@ async function fetchOrderBook() {
 
 async function fetchTrades() {
   try {
-    const res = await fetch(`https://api.binance.com/api/v3/trades?symbol=${S.active}&limit=30`);
+    const res = await fetch(`https://data-api.binance.vision/api/v3/trades?symbol=${S.active}&limit=30`);
     const trades = await res.json();
     if (!Array.isArray(trades)) return;
     const body = document.getElementById('trades-body');
@@ -562,7 +562,7 @@ function fetchCandles() {
     limit = 500;
   }
 
-  fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${interval}&limit=${limit}`)
+  fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=${interval}&limit=${limit}`)
     .then(r => r.json())
     .then(data => {
       if (!Array.isArray(data) || data.length === 0) throw new Error('Bad data');
@@ -673,10 +673,10 @@ function startMetrics() {
       else el.textContent = Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
     }
   }, 1000);
-  // Latency ping — measure directly against Binance API
+  // Latency ping — measure directly against Binance Vision API
   setInterval(() => {
     const t0 = performance.now();
-    fetch('https://api.binance.com/api/v3/ping').then(() => {
+    fetch('https://data-api.binance.vision/api/v3/ping').then(() => {
       const lat = Math.round(performance.now() - t0);
       const el = document.getElementById('metric-latency');
       if (el) el.textContent = lat + 'ms';
