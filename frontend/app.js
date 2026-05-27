@@ -3,7 +3,7 @@
  * Uses backend proxy (CoinGecko) for ISP-safe real market data
  * Prices in both USD and IDR with live exchange rate
  */
-const BACKEND = 'https://farm.agungtrijayaabadi.com';
+// Serverless: connecting directly to Binance Public API
 
 const COINS = [
   { sym:'BTCUSDT', name:'Bitcoin', base:'BTC' },
@@ -126,42 +126,65 @@ function updateTopbar() {
   }
 }
 
-// ══════ DATA FETCHING FROM BACKEND PROXY ══════
+// ══════ LIVE USD/IDR EXCHANGE RATE ══════
+async function fetchUsdIdrRate() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const json = await res.json();
+    if (json.rates && json.rates.IDR) {
+      S.usdidr = json.rates.IDR;
+    }
+  } catch (err) {
+    console.error('Failed to fetch live USD/IDR rate, using fallback:', err);
+  }
+}
+
+// ══════ DATA FETCHING DIRECTLY FROM PUBLIC EXCHANGE API ══════
 async function fetchPrices() {
   try {
-    const res = await fetch(`${BACKEND}/api/prices`);
-    const json = await res.json();
-    if (!json.data) return;
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ADAUSDT"]');
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
 
-    S.dataSource = json.source || 'coingecko';
+    S.dataSource = 'binance';
     updateTopbar();
 
-    for (const [sym, d] of Object.entries(json.data)) {
-      S.prices[sym] = d.lastPrice;
-      S.pricesIDR[sym] = d.lastPriceIDR;
-      S.changes[sym] = d.priceChangePercent;
-      S.changesIDR[sym] = d.priceChangePercentIDR;
-      S.highs[sym] = d.highPrice;
-      S.lows[sym] = d.lowPrice;
-      S.volumes[sym] = d.volume;
-      S.openPrices[sym] = d.openPrice;
-      S.wavg[sym] = d.weightedAvgPrice;
-      S.prevClose[sym] = d.prevClosePrice;
-      S.qvol[sym] = d.quoteVolume;
-      S.tradeCount[sym] = d.tradeCount;
-      S.bidP[sym] = d.bidPrice;
-      S.askP[sym] = d.askPrice;
+    data.forEach(d => {
+      const sym = d.symbol;
+      const lastPrice = parseFloat(d.lastPrice);
+      const priceChangePercent = parseFloat(d.priceChangePercent);
+      const highPrice = parseFloat(d.highPrice);
+      const lowPrice = parseFloat(d.lowPrice);
+      const volume = parseFloat(d.volume);
+      const openPrice = parseFloat(d.openPrice);
+      const weightedAvgPrice = parseFloat(d.weightedAvgPrice);
+      const prevClosePrice = parseFloat(d.prevClosePrice);
+      const quoteVolume = parseFloat(d.quoteVolume);
+      const tradeCount = parseInt(d.count);
+      const bidPrice = parseFloat(d.bidPrice);
+      const askPrice = parseFloat(d.askPrice);
 
-      // Store the live USD/IDR rate from this pair
-      if (d.usdToIdr && d.usdToIdr > 0) {
-        S.usdidr = d.usdToIdr;
-      }
+      S.prices[sym] = lastPrice;
+      S.pricesIDR[sym] = lastPrice * S.usdidr;
+      S.changes[sym] = priceChangePercent;
+      S.changesIDR[sym] = priceChangePercent;
+      S.highs[sym] = highPrice;
+      S.lows[sym] = lowPrice;
+      S.volumes[sym] = volume;
+      S.openPrices[sym] = openPrice;
+      S.wavg[sym] = weightedAvgPrice;
+      S.prevClose[sym] = prevClosePrice;
+      S.qvol[sym] = quoteVolume;
+      S.tradeCount[sym] = tradeCount;
+      S.bidP[sym] = bidPrice;
+      S.askP[sym] = askPrice;
 
       updateCoinCard(sym);
       checkAlerts(sym);
-    }
+    });
+
     if (S.active) updateStats();
-    S.msgCount += Object.keys(json.data).length;
+    S.msgCount += data.length;
     setBadge('live');
     if (!S.connectTime) S.connectTime = Date.now();
   } catch (err) {
@@ -172,7 +195,7 @@ async function fetchPrices() {
 
 async function fetchOrderBook() {
   try {
-    const res = await fetch(`${BACKEND}/api/orderbook?symbol=${S.active}`);
+    const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${S.active}&limit=20`);
     const data = await res.json();
     if (data.asks && data.bids) {
       renderOrderBook(data.asks, data.bids);
@@ -184,7 +207,7 @@ async function fetchOrderBook() {
 
 async function fetchTrades() {
   try {
-    const res = await fetch(`${BACKEND}/api/trades?symbol=${S.active}`);
+    const res = await fetch(`https://api.binance.com/api/v3/trades?symbol=${S.active}&limit=30`);
     const trades = await res.json();
     if (!Array.isArray(trades)) return;
     const body = document.getElementById('trades-body');
@@ -198,15 +221,21 @@ async function fetchTrades() {
   }
 }
 
-function startDataFetch() {
+async function startDataFetch() {
   setBadge('connecting');
-  // Fetch immediately
+  // Fetch live exchange rate first
+  await fetchUsdIdrRate();
+  
+  // Fetch market data immediately
   fetchPrices();
   fetchOrderBook();
   fetchTrades();
   fetchCandles();
 
-  // Poll every 1.0 second for real-time prices & orderbook updates (backed by HTX Global API)
+  // Poll exchange rate every 5 minutes
+  setInterval(fetchUsdIdrRate, 300000);
+
+  // Poll every 1.0 second for real-time prices & orderbook updates directly from Binance API
   pollTimer = setInterval(() => {
     fetchPrices();
     fetchOrderBook();
@@ -533,7 +562,7 @@ function fetchCandles() {
     limit = 500;
   }
 
-  fetch(`${BACKEND}/api/klines?symbol=${sym}&interval=${interval}&limit=${limit}`)
+  fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${interval}&limit=${limit}`)
     .then(r => r.json())
     .then(data => {
       if (!Array.isArray(data) || data.length === 0) throw new Error('Bad data');
@@ -644,10 +673,10 @@ function startMetrics() {
       else el.textContent = Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm';
     }
   }, 1000);
-  // Latency ping — measure against our own backend
+  // Latency ping — measure directly against Binance API
   setInterval(() => {
     const t0 = performance.now();
-    fetch(`${BACKEND}/`).then(() => {
+    fetch('https://api.binance.com/api/v3/ping').then(() => {
       const lat = Math.round(performance.now() - t0);
       const el = document.getElementById('metric-latency');
       if (el) el.textContent = lat + 'ms';
