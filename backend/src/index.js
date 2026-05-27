@@ -9,7 +9,13 @@ const PORT = Number(process.env.PORT || 4000);
 const SYMBOL = process.env.SYMBOL || 'btcusdt';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
+}));
+app.options('*', cors());
 app.use(express.json());
 
 // ══════ SYMBOLS MAP FOR HTX & COINGECKO ══════
